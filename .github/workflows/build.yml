@@ -33,18 +33,11 @@ jobs:
         name: Run Buildx
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6 \
+            --platform linux/amd64,linux/arm64,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6 \
             --cache-from suika/hydrus:latest \
             --output "type=image,push=true" \
             --tag suika/httpbin:latest \
             --file ./Dockerfile .
-      - 
-        name: Docker Hub Description
-        uses: peter-evans/dockerhub-description@v2.1.0
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          DOCKERHUB_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-          DOCKERHUB_REPOSITORY: suika/httpbin
       - 
         name: Docker logout
         run: |
