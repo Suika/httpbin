@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: [ubuntu-latest]
+    strategy:
+      matrix:
+        buildx_arch: [linux/amd64,linux/arm64,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6]
     steps:
       -
         name: Checkout
@@ -30,17 +33,60 @@ jobs:
           DOCKER_REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           DOCKER_REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
       -
-        name: Run Buildx
+        name: Run Buildx ${{ matrix.buildx_arch }}
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6 \
-            --cache-from suika/hydrus:latest \
+            --platform ${{ matrix.buildx_arch }} \
             --output "type=image,push=true" \
-            --tag suika/httpbin:latest \
+            --tag suika/httpbin:${buildx_arch_var##*/} \
             --file ./Dockerfile .
+        env:
+          buildx_arch_var: ${{ matrix.buildx_arch }}
       - 
         name: Docker logout
         run: |
           docker logout
         env:
           DOCKER_REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+  manifest:
+    runs-on: [ubuntu-latest]
+    needs: [build]
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v1
+      -
+        name: Set up Docker Buildx
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          version: latest
+      -
+        name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+      - 
+        name: Docker login
+        run: |
+          docker login -u "${DOCKER_REGISTRY_USERNAME}" -p "${DOCKER_REGISTRY_PASSWORD}"
+        env:
+          DOCKER_REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          DOCKER_REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      -
+        name: Create manifest
+        run: |
+          docker manifest create suika/httpbin:latest \
+            suika/httpbin:amd64 \
+            suika/httpbin:arm64 \
+            suika/httpbin:s390x \
+            suika/httpbin:386 \
+            suika/httpbin:v7 \
+            suika/httpbin:v6
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+      -
+        name: Push manifest
+        run: docker manifest push suika/httpbin:latest
+      - 
+        name: Docker logout
+        run: |
+          docker logout
