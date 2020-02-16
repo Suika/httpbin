@@ -74,6 +74,7 @@ jobs:
       -
         name: Create manifest
         run: |
+          export DOCKER_CLI_EXPERIMENTAL=enabled
           docker manifest create suika/httpbin:latest \
             suika/httpbin:amd64 \
             suika/httpbin:arm64 \
@@ -85,7 +86,9 @@ jobs:
           DOCKER_CLI_EXPERIMENTAL: enabled
       -
         name: Push manifest
-        run: docker manifest push suika/httpbin:latest
+        run: |
+          export DOCKER_CLI_EXPERIMENTAL=enabled
+          docker manifest push suika/httpbin:latest
       - 
         name: Docker logout
         run: |
